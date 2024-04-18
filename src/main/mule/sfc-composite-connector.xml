@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+
+<mule xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http"
+	xmlns:salesforce-composite="http://www.mulesoft.org/schema/mule/salesforce-composite"
+	xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd
+http://www.mulesoft.org/schema/mule/salesforce-composite http://www.mulesoft.org/schema/mule/salesforce-composite/current/mule-salesforce-composite.xsd
+http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd
+http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd">
+	<salesforce-composite:composite-config name="Salesforce_Composite_Config" doc:name="Salesforce Composite Config" doc:id="166e5c4b-efcd-44b2-9a7b-31dd26df149d" >
+		<salesforce-composite:oauth-user-pass-connection consumerKey="3MVG9q4K8Dm94dAx2xZ_CsiU5jFh5dQahQdfGHJqY2.H7nt7NNM1W8mnzDi8YlFODLfXr46zFC2fnrIC4N2Bh" consumerSecret="65E3005CF360E6562F284F57264EFB19E29685876F832B7F2B8D7C269AAAC08D" username="dev_aravind@conflowence.com" password="Aravind@123" securityToken="lkXaZFz72c3FunyAZ4M4M7Hu" tokenEndpoint="https://conflowence-1c-dev-ed.develop.my.salesforce.com/services/oauth2/token" />
+	</salesforce-composite:composite-config>
+	<http:listener-config name="HTTP_Listener_config" doc:name="HTTP Listener config" doc:id="80f806de-090b-435a-9ecd-b7fde6b1e61f" >
+		<http:listener-connection host="0.0.0.0" port="8081" />
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="0e5a63a4-b80e-490e-a136-12ce639b259b" file="listener2.yaml" />
+	<http:listener-config name="HTTP_Listener_config1" doc:name="HTTP Listener config" doc:id="56f25399-ff25-4e53-a23d-3ef649fc521d" >
+		<http:listener-connection host="${http.host}" port="${http.port}" />
+	</http:listener-config>
+	<http:listener-config name="HTTP_Listener_config2" doc:name="HTTP Listener config" doc:id="2f60fec8-4a07-4ea1-bb7f-4496afa3675d" >
+		<http:listener-connection host="${https.host}" port="${https.port}"/>
+	</http:listener-config>
+	<configuration-properties doc:name="Configuration properties" doc:id="81f51bfe-2d5d-417d-951a-ee7929fbaafe" file="oauth_listener_config.yaml" />
+	<salesforce-composite:composite-config name="Salesforce_Composite_Config1" doc:name="Salesforce Composite Config" doc:id="e1ac8ef6-0c9c-4a7e-9ecf-091c11332d03" >
+		<salesforce-composite:config-with-oauth-connection >
+			<salesforce-composite:oauth-authorization-code consumerKey="3MVG9q4K8Dm94dAx2xZ_CsiU5jPNFYs.wI0RYG8qY7KMzMBQIv_7fhaeAGm_F1WopOQM_zaPSQc.M7z6cfoPT" consumerSecret="0207366AAF25422BA2C0870AE81572C720E71144CB0F20F8E15EC5F71BFD70B3" authorizationUrl="https://conflowence-1c-dev-ed.develop.my.salesforce.com/services/oauth2/authorize" accessTokenUrl="https://conflowence-1c-dev-ed.develop.my.salesforce.com/services/oauth2/token" />
+			<salesforce-composite:oauth-callback-config listenerConfig="HTTP_Listener_config2" callbackPath="/sObjectcallback" authorizePath="/authorize" externalCallbackUrl="http://localhost:8083/sObjectcallback" />
+		</salesforce-composite:config-with-oauth-connection>
+	</salesforce-composite:composite-config>
+	<flow name="sfc-composite-connectorFlow" doc:id="91ed8952-8f4d-4ebf-a3b7-ebfea3feddcc" >
+		<http:listener doc:name="Listener" doc:id="185b5067-c610-4753-b82f-c80f487d2495" config-ref="HTTP_Listener_config" path="/callback"/>
+		<salesforce-composite:execute-composite-batch doc:name="Execute composite batch" doc:id="26f1003f-fa77-41b0-a021-c0f7e491875c" config-ref="Salesforce_Composite_Config">
+			<salesforce-composite:sub-requests ><![CDATA[#[payload.batchRequests]]]></salesforce-composite:sub-requests>
+		</salesforce-composite:execute-composite-batch>
+		<ee:transform doc:name="Transform Message" doc:id="a6bfd006-f360-4346-9f6c-a583ff460b61" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+	<flow name="sfc-composite-connectorFlow1" doc:id="5410a79f-e462-4ec4-8bc9-5a8149fca20a" >
+		<http:listener doc:name="Listener" doc:id="6ee28a0e-79ef-4742-ad37-6900418f2b68" config-ref="HTTP_Listener_config1" path="/sObject"/>
+		<salesforce-composite:create-sobject-tree doc:name="Create sobject tree" doc:id="18407ce8-8b76-4a1a-bc95-8cf2bdfc2611" config-ref="Salesforce_Composite_Config" type="Account">
+			<salesforce-composite:s-objects ><![CDATA[#[payload.records]]]></salesforce-composite:s-objects>
+		</salesforce-composite:create-sobject-tree>
+		<ee:transform doc:name="Transform Message" doc:id="ec3c7df9-2500-4fe7-8074-2ab8689f8bfb" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+	</flow>
+</mule>
